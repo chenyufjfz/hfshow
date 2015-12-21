@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <QThread>
 #include <vector>
+#include <QtWidgets>
 #include "ShareConfig.h"
 using namespace std;
 typedef struct {
@@ -19,10 +20,13 @@ public:
 	RenderImage(QObject *parent = 0);
 	~RenderImage();
 	void end();
+
 signals:
 	void renderedImage(const QImage &image);
+
 protected:
 	void run() Q_DECL_OVERRIDE;	
+
 private:
 	int width, height, xe, ye, cd;
 	HANDLE hmap, hmutex, hevent;
@@ -32,6 +36,7 @@ private:
 	NodeLink *plink;
 	int *ppower;
 	friend class FpgaShow;
+	QImage org_img, neuron_img;
 };
 
 #endif // RENDERIMAGE_H

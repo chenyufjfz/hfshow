@@ -27,7 +27,7 @@ FpgaShow::~FpgaShow()
 
 void FpgaShow::setscale(float s)
 {
-	if (s <= 2 && s >= 0.125) {
+	if (s <= 2.01 && s >= 0.124) {
 		scale = s;
 		int neww, newh;
 		if (pixmap.isNull()) {

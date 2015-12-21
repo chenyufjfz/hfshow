@@ -11,7 +11,7 @@ RenderImage::RenderImage(QObject *parent)
 	height = 0;
 	xe = 48; 
 	ye = 48;
-	cd = 16;
+	cd = 24;
 	finish = false;
 	hmap = ::CreateFileMappingA(INVALID_HANDLE_VALUE, 
 		NULL, 
@@ -46,6 +46,9 @@ RenderImage::RenderImage(QObject *parent)
 		ppara->link_num = 0;
 		ppara->power_num = 0;
 	}
+
+	org_img.load("pic.png");
+	neuron_img = org_img.scaled(cd, cd);
 }
 
 RenderImage::~RenderImage()
@@ -104,14 +107,16 @@ void RenderImage::run()
 				for (int j = 0; j < height; j++) {
 					int y = j + 1;
 					int idx = i*height + j;
-					int color = (power[idx] >= COLOR_LEVEL) ? COLOR_LEVEL - 1 : power[idx];
-					color *= (256 / COLOR_LEVEL);
-					p.setPen(QPen(QColor(255, 255, 255, color), 1));					
-					p.setBrush(QBrush(QColor(255, 255, 255, color)));
-					if (i >= width)
+					//int color = (power[idx] >= COLOR_LEVEL) ? COLOR_LEVEL - 1 : power[idx];
+					//color *= (256 / COLOR_LEVEL);
+					
+					if (i >= width) {
+						p.setPen(QPen(Qt::yellow, 1));
+						p.setBrush(QBrush(Qt::yellow));
 						p.drawRect(QRect(x*xe - cd / 2, y*ye - cd / 2, cd, cd));
+					}						
 					else
-						p.drawEllipse(QRect(x*xe - cd / 2, y*ye - cd / 2, cd, cd));
+						p.drawImage(QPointF(x*xe - cd / 2, y*ye - cd / 2), neuron_img);
 				}
 			}
 
