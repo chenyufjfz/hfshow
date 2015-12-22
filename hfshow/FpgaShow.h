@@ -29,9 +29,11 @@ protected:
 	bool mouse_press;
 	float scale;
 	RenderImage render;
-	QPixmap pixmap;
+	QImage img_l, img_r;
+	int width, height;
+
 protected slots:
-	void updatePixmap(const QImage &image);
+	void updatePixmap(const QImage &image_l, const QImage &image_r);
 };
 
 #endif // FPGASHOW_H

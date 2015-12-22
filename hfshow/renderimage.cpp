@@ -9,8 +9,8 @@ RenderImage::RenderImage(QObject *parent)
 
 	width = 0;
 	height = 0;
-	xe = 48; 
-	ye = 48;
+	xe = 64; 
+	ye = 64;
 	cd = 24;
 	finish = false;
 	hmap = ::CreateFileMappingA(INVALID_HANDLE_VALUE, 
@@ -97,11 +97,15 @@ void RenderImage::run()
 		}
 		//if link or power updated, redraw image
 		if (update_power || update_link) {
-			QImage image((width + 3)*xe, height*ye, QImage::Format_RGB32);
-			image.fill(Qt::black);
-			QPainter p(&image);
-			for (int i = 0; i <= width + 1; i++) {
-				int x = (i == width) ? 1 : ((i == width + 1) ? width + 2 : i + 2);
+			QImage image_l((width / 2 + 1)*xe + xe / 2, height*ye, QImage::Format_RGB32);
+			QImage image_r((width / 2 + 2)*xe, height*ye, QImage::Format_RGB32);
+			image_l.fill(Qt::black);
+			image_r.fill(Qt::black);
+			QPainter pl(&image_l);
+			QPainter pr(&image_r);
+
+			for (int i = 0; i <= width / 2; i++) {
+				int x = (i == width / 2) ? 1 : i + 2;
 				if (finish)
 					break;
 				for (int j = 0; j < height; j++) {
@@ -109,49 +113,90 @@ void RenderImage::run()
 					int idx = i*height + j;
 					//int color = (power[idx] >= COLOR_LEVEL) ? COLOR_LEVEL - 1 : power[idx];
 					//color *= (256 / COLOR_LEVEL);
-					
-					if (i >= width) {
-						p.setPen(QPen(Qt::yellow, 1));
-						p.setBrush(QBrush(Qt::yellow));
-						p.drawRect(QRect(x*xe - cd / 2, y*ye - cd / 2, cd, cd));
-					}						
+
+					if (x == 1) {
+						pl.setPen(QPen(Qt::yellow, 1));
+						pl.setBrush(QBrush(Qt::yellow));
+						pl.drawRect(QRect(x*xe - cd / 2, y*ye - cd / 2, cd, cd));
+					}
 					else
-						p.drawImage(QPointF(x*xe - cd / 2, y*ye - cd / 2), neuron_img);
+						pl.drawImage(QPointF(x*xe - cd / 2, y*ye - cd / 2), neuron_img);
 				}
 			}
 
-			unsigned idx0 = 0xffffffff;
-			for (int i = 0; i < link.size(); i++) {	
-				unsigned startx = link[i].start >> 16;
-				unsigned starty = link[i].start & 0xffff;
-				unsigned endx = link[i].end >> 16;
-				unsigned endy = link[i].end & 0xffff;
-				unsigned idx = startx*height + starty;
+			for (int i = width / 2 ; i <= width + 1; i++) {
+				int x = (i == width + 1) ? width + 2 : i + 2;
 				if (finish)
 					break;
-				if (idx != idx0) {
-					int color = (power[idx] >= COLOR_LEVEL) ? COLOR_LEVEL - 1 : power[idx];
-					color *= (256 / COLOR_LEVEL);
-					p.setPen(QPen(QColor(255, 255, 255, color), 1));
-				}
-				if (startx >= width + 2 || endx >= width + 2 ||
-					starty >= height || endy >= height) {
-					p.save();
-					p.setPen(QPen(QColor(255, 255, 255, 255), 1));
-					p.drawText(0, 0, "some link number exceed range");
-					p.restore();
-				}
-				else {
-					startx = (startx == width) ? 1 : ((startx == width + 1) ? width + 2 : startx + 2);
-					starty++;
-					endx = (endx == width) ? 1 : ((endx == width + 1) ? width + 2 : endx + 2);
-					endy++;
-					p.drawLine(startx*xe, starty*ye, endx*xe, endy*ye);
-					idx0 = idx;
+				for (int j = 0; j < height; j++) {
+					int y = j + 1;
+					int idx = i*height + j;
+					if (x == width + 2) {
+						pr.setPen(QPen(Qt::yellow, 1));
+						pr.setBrush(QBrush(Qt::yellow));
+						pr.drawRect(QRect(x*xe - cd / 2 - image_l.width(), y*ye - cd / 2, cd, cd));
+					}
+					else
+						pr.drawImage(QPointF(x *xe - cd / 2 - image_l.width(), y*ye - cd / 2), neuron_img);
 				}
 			}
+						
+			for (int i = 0; i < link.size(); i++) {	
+				int startx = link[i].start >> 16;
+				int starty = (link[i].start & 0xffff)>>3;
+				int endx = link[i].end >> 16;
+				int endy = (link[i].end & 0xfff8)>>3;
+				int endport = link[i].end & 7;
+				unsigned idx = startx*height + starty;
+				int color = (power[idx] >= COLOR_LEVEL) ? COLOR_LEVEL - 1 : power[idx];
+				color *= (256 / COLOR_LEVEL);
+
+				if (finish)
+					break;				
+				
+				if (startx >= width + 2 || endx >= width + 2 ||
+					starty >= height || endy >= height) {
+					pl.save();
+					pl.setPen(QPen(QColor(255, 255, 255, 255), 1));
+					pl.drawText(0, 0, "some link number exceed range");
+					pl.restore();
+				}
+				else {
+					bool draw_left = false, draw_right = false;
+					startx = (startx == width) ? 
+						1 : 
+						((startx == width + 1) ? width + 2 : startx + 2);
+					starty++;
+					startx = startx*xe;
+					starty = starty*ye;					
+					if (startx < image_l.width())
+						draw_left = true;
+					else 
+						draw_right = true;						
+											
+					endx = (endx == width) ? 1 : ((endx == width + 1) ? width + 2 : endx + 2);
+					endy++;
+					endx = endx*xe;
+					endy = endy*ye;
+					if (endx < image_l.width())
+						draw_left = true;
+					else
+						draw_right = true;
+
+					endport = endport * 4 - 6;
+					if (draw_left) {
+						pl.setPen(QPen(QColor(255, 255, 255, color), 1));
+						pl.drawLine(startx + cd / 2, starty, endx - cd / 2, endy + endport);
+					}
+					if (draw_right) {
+						pr.setPen(QPen(QColor(255, 255, 255, color), 1));
+						pr.drawLine(startx + cd / 2 - image_l.width(), starty, endx - cd / 2 - image_l.width(), endy + endport);
+					}									
+				}
+			}
+
 			if (!finish)
-				emit renderedImage(image);
+				emit renderedImage(image_l, image_r);
 		}
 		//if mainthread require us quit, then quit
 		if (finish)

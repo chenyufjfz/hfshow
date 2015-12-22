@@ -5,11 +5,11 @@
 FpgaShow::FpgaShow(QWidget *parent)
 	: QWidget(parent)
 {
-	scale = 1;
+	scale = 0.5;
 
 	mouse_press = false;
 	setMouseTracking(true);
-	connect(&render, SIGNAL(renderedImage(QImage)), this, SLOT(updatePixmap(QImage)));
+	connect(&render, SIGNAL(renderedImage(QImage, QImage)), this, SLOT(updatePixmap(QImage, QImage)));
 	render.start();
 	resize(600, 400);
 	/*
@@ -27,16 +27,16 @@ FpgaShow::~FpgaShow()
 
 void FpgaShow::setscale(float s)
 {
-	if (s <= 2.01 && s >= 0.124) {
+	if (s <= 1.01 && s >= 0.062) {
 		scale = s;
 		int neww, newh;
-		if (pixmap.isNull()) {
+		if (img_l.isNull()) {
 			neww = 600;
 			newh = 400;
 		}
 		else {
-			neww = int(pixmap.width() * scale);
-			newh = int(pixmap.height() * scale);
+			neww = int(width * scale);
+			newh = int(height * scale);
 		}
 		
 		resize(neww, newh);
@@ -52,7 +52,7 @@ float FpgaShow::getscale()
 void FpgaShow::paintEvent(QPaintEvent *)
 {
 	QPainter painter(this);
-	if (pixmap.isNull()) {
+	if (img_l.isNull()) {
 		painter.setPen(Qt::white);
 		painter.drawText(rect(), Qt::AlignCenter, tr("Rendering initial image, please wait..."));
 		return;
@@ -60,7 +60,8 @@ void FpgaShow::paintEvent(QPaintEvent *)
 
 	painter.save();	
 	painter.scale(scale, scale);
-	painter.drawPixmap(0, 0, pixmap);
+	painter.drawImage(0, 0, img_l);
+	painter.drawImage(img_l.width(), 0, img_r);
 	painter.restore();
 	
 }
@@ -92,11 +93,15 @@ void FpgaShow::closeEvent(QCloseEvent * event)
 	render.wait();
 }
 
-void FpgaShow::updatePixmap(const QImage &image)
+void FpgaShow::updatePixmap(const QImage &image_l, const QImage &image_r)
 {
-	pixmap = QPixmap::fromImage(image);
-	int neww = int(pixmap.width() * scale);
-	int newh = int(pixmap.height() * scale);
+	
+	width = image_l.width() +image_r.width();
+	height = image_l.height();
+	img_l = image_l;
+	img_r = image_r;
+	int neww = int(width * scale);
+	int newh = int(height * scale);
 	resize(neww, newh);
 	update();
 }

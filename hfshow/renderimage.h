@@ -22,13 +22,13 @@ public:
 	void end();
 
 signals:
-	void renderedImage(const QImage &image);
+	void renderedImage(const QImage &image_l, const QImage &image_r);
 
 protected:
 	void run() Q_DECL_OVERRIDE;	
 
 private:
-	int width, height, xe, ye, cd;
+	int width, height, xe, ye, cd; //xe>2*cd
 	HANDLE hmap, hmutex, hevent;
 	LPVOID psharemem;
 	bool finish;
